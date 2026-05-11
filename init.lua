@@ -17,16 +17,20 @@ vim.opt.laststatus = 2
 -- macro to remove commnnts in idf and change to single line string
 -- let @e = ":s/,/,\\r/g\<CR>"
 -- let @c = ":s/\\n//\<CR>"
+vim.keymap.set("v", "<leader>m", function()
+	vim.cmd("s/^ *//e")
+	vim.cmd("s/;.*\\n/,/e")
+end, { desc = "Run custom macro replacements" })
+
 vim.keymap.set(
 	"v",
 	"<Leader>s",
-	":s/,.*/,<CR>gv:s/;.*/;<CR>gv:s/^ */<CR>gv:s/\\n/<CR>gv:s/^/'<CR>gv:s/$/'<CR>",
+	':s/,.*/,<CR>gv:s/;.*/;<CR>gv:s/^\\s*/<CR>gv:s/\\n/<CR>gv:s/^/"<CR>gv:s/$/"<CR>',
 	{ silent = true }
 )
+
 vim.keymap.set("v", "<Leader>c", ":s/\\n//<CR>", { silent = true })
 vim.keymap.set("n", "<Leader>r", ":s/,/,\\r/g<CR>", { silent = true })
-
-vim.keymap.set("n", "<Leader>f", ":s/,/-/g<CR>", { silent = true })
 
 -- allow the . to execute once for each line of a visual selection
 vim.keymap.set("v", ".", ":normal .<CR>")
@@ -42,23 +46,63 @@ vim.api.nvim_create_autocmd({ "BufLeave", "FocusLost" }, {
 	end,
 })
 
+-- format current document using conform.nvim
+vim.keymap.set({ "n", "v" }, "<leader>cf", function()
+	require("conform").format({ async = true }, function(err, did_edit)
+		if not err and did_edit then
+			vim.notify("Code formatted", vim.log.levels.INFO, { title = "Conform" })
+		end
+	end)
+end, { desc = "Format buffer" })
+
+-- Enable autoread and set up checking triggers
+vim.o.autoread = true
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter" }, {
+	command = "if mode() != 'c' | checktime | endif",
+	pattern = "*",
+})
+
+-- Load current session
+vim.keymap.set("n", "<leader>l", ":so curr.session<CR>", { silent = false })
+
+-- fzf-lua shortcuts
+vim.keymap.set("n", "<leader>b", ":FzfLua buffers<CR>", { silent = false })
+vim.keymap.set("n", "<leader>h", ":FzfLua oldfiles<CR>", { silent = false })
+
+--vim.keymap.set("n", "<leader>gv", ":FzfLua grep<CR>", { silent = false })
+vim.keymap.set("n", "<leader>g", function()
+	local dir = vim.fn.input("Directory: ", vim.loop.cwd(), "dir")
+	require("fzf-lua").live_grep({ cwd = dir })
+end, { noremap = true, silent = true })
+
+--vim.keymap.set("n", "<leader>fv", ":FzfLua files<CR>", { silent = false })
+vim.keymap.set("n", "<leader>f", function()
+	local dir = vim.fn.input("Directory: ", vim.loop.cwd(), "dir")
+	require("fzf-lua").files({ cwd = dir })
+end, { noremap = true, silent = true })
+
+-- vim-mark shortcuts
+vim.keymap.set("n", "<leader>m", ":Mark<Space>", { silent = false })
+vim.keymap.set("n", "<leader>M", ":MarkClear<CR>", { silent = true })
+
 -- navigate splits
 vim.keymap.set("n", "<c-h>", "<c-w>h", { silent = true })
 vim.keymap.set("n", "<c-j>", "<c-w>j", { silent = true })
 vim.keymap.set("n", "<c-k>", "<c-w>k", { silent = true })
 vim.keymap.set("n", "<c-l>", "<c-w>l", { silent = true })
+vim.keymap.set("n", "<c-c>", ":bp | bd #<cr>", { silent = true })
 
 -- resize with arrows
-vim.keymap.set("n", "<up>", ":resize +2<cr>", { silent = true })
-vim.keymap.set("n", "<down>", ":resize -2<cr>", { silent = true })
-vim.keymap.set("n", "<left>", ":vertical resize -2<cr>", { silent = true })
-vim.keymap.set("n", "<right>", ":vertical resize +2<cr>", { silent = true })
+vim.keymap.set("n", "<down>", ":resize +2<cr>", { silent = true })
+vim.keymap.set("n", "<up>", ":resize -2<cr>", { silent = true })
+vim.keymap.set("n", "<right>", ":vertical resize -2<cr>", { silent = true })
+vim.keymap.set("n", "<left>", ":vertical resize +2<cr>", { silent = true })
 
 -- insert an empty line
 vim.keymap.set("n", "<c-o>", "i<cr><esc>0", { silent = true })
 
 -- show list in buffer to select
-vim.keymap.set("n", "<Leader>b", ":ls<CR>:b<Space>", { silent = true })
+-- vim.keymap.set("n", "<Leader>b", ":ls<CR>:b<Space>", { silent = true }) --using fzf-lua
 vim.keymap.set("n", "<Tab>", ":b#<CR>", { silent = true })
 
 -- Explore files
@@ -69,11 +113,11 @@ vim.keymap.set("n", "<Leader>e", ":Ex<CR>", { silent = true })
 -- vim.keymap.set('n', '<c-j>',':bp<CR>', {silent=true})
 
 -- replace current word/selection with contents of paste buffer
-vim.keymap.set("n", "<c-p>", '"_cw"<esc>', { silent = true })
-vim.keymap.set("v", "<c-p>", '"_c"<esc>', { silent = true })
+vim.keymap.set("n", "<c-p>", '"_cw<C-r>"<esc>', { silent = true })
+vim.keymap.set("v", "<c-p>", '"_c<C-r>"<esc>', { silent = true })
 
 -- Surround/brackets
-vim.keymap.set("v", '"', 'c"<c-r>+"<esc>', { silent = true })
+-- vim.keymap.set("v", '"', 'c"<c-r>+"<esc>', { silent = true })
 vim.keymap.set("v", "'", "c'<c-r>+'<esc>", { silent = true })
 vim.keymap.set("v", "{", "c{<c-r>+}<esc>", { silent = true })
 vim.keymap.set("v", "[", "c[<c-r>+]<esc>", { silent = true })
@@ -84,24 +128,40 @@ vim.keymap.set("n", "<leader>'", "i''<esc>ba", { silent = true })
 vim.keymap.set("n", "<leader>[", "i[]<esc>ba", { silent = true })
 vim.keymap.set("n", "<leader>{", "i{}<esc>ba", { silent = true })
 
--- file shortcuts
-vim.keymap.set("n", "<leader>v", "<cmd>e  ~/AppData/Local/nvim/init.lua<cr>", { silent = true })
-vim.keymap.set("n", "<leader>wk", "<cmd>e ~/personal/career/google.md<cr>", { silent = true })
-vim.keymap.set("n", "<leader>wj", "<cmd>e ~/personal/journal.md<cr>", { silent = true })
-
 -- python comments
 vim.keymap.set({ "v", "n" }, ",c", ":s/^/#<CR>:noh<CR>", { silent = true })
-vim.keymap.set({ "v", "n" }, ",x", ":s/^#//<CR>:noh<CR>", { silent = true })
+vim.keymap.set({ "v", "n" }, ",x", ":s/^#[ ]*//<CR>:noh<CR>", { silent = true })
 
 -- stay at current word when using star search
-vim.keymap.set("n", "*", function()
-	vim.fn.setreg("/", vim.fn.expand("<cword>"))
-end, { silent = true })
+--vim.keymap.set("n", "*", function()
+--	vim.fn.setreg("/", vim.fn.expand("<cword>"))
+--end, { silent = true })
 
 vim.keymap.set("v", "//", 'y/<C-R>"<CR>', { silent = true })
 
 vim.g.mapleader = " "
 vim.g.maplocalleader = "," -- using comma as local leader
+
+-- Save only folds between sessions
+vim.opt.viewoptions = "folds"
+
+-- Auto-save folds when leaving a buffer
+vim.api.nvim_create_autocmd("BufWinLeave", {
+	callback = function()
+		if vim.bo.filetype ~= "" and vim.fn.expand("%") ~= "" then
+			vim.cmd("silent! mkview")
+		end
+	end,
+})
+
+-- Auto-load folds when reopening a buffer
+vim.api.nvim_create_autocmd("BufWinEnter", {
+	callback = function()
+		if vim.bo.filetype ~= "" and vim.fn.expand("%") ~= "" then
+			vim.cmd("silent! loadview")
+		end
+	end,
+})
 
 -- Install lazy.Nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -121,6 +181,27 @@ vim.opt.rtp:prepend(lazypath)
 -- Install plugins (colorscheme, neorg)
 
 require("lazy").setup({
+
+	{
+		"ibhagwan/fzf-lua",
+		-- optional for icon support
+		dependencies = { "nvim-tree/nvim-web-devicons" },
+		-- or if using mini.icons/mini.nvim
+		-- dependencies = { "nvim-mini/mini.icons" },
+		---@module "fzf-lua"
+		---@type fzf-lua.Config|{}
+		---@diagnostic disable: missing-fields
+		opts = {},
+		---@diagnostic enable: missing-fields
+	},
+
+	{
+		"inkarkat/vim-mark",
+		dependencies = {
+			"inkarkat/vim-ingo-library",
+		},
+		event = "VeryLazy",
+	},
 
 	{
 		"nvim-treesitter/nvim-treesitter",
@@ -307,6 +388,157 @@ require("lazy").setup({
 			--   end
 			--   vim.diagnostic.config { signs = { text = diagnostic_signs } }
 			-- end
+
+			-- LSP servers and clients are able to communicate to each other what features they support.
+			--  By default, Neovim doesn't support everything that is in the LSP specification.
+			--  When you add nvim-cmp, luasnip, etc. Neovim now has *more* capabilities.
+			--  So, we create new capabilities with nvim cmp, and then broadcast that to the servers.
+			local capabilities = vim.lsp.protocol.make_client_capabilities()
+			capabilities = vim.tbl_deep_extend("force", capabilities, require("cmp_nvim_lsp").default_capabilities())
+
+			-- Enable the following language servers
+			--  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
+			--
+			--  Add any additional override configuration in the following tables. Available keys are:
+			--  - cmd (table): Override the default command used to start the server
+			--  - filetypes (table): Override the default list of associated filetypes for the server
+			--  - capabilities (table): Override fields in capabilities. Can be used to disable certain LSP features.
+			--  - settings (table): Override the default settings passed when initializing the server.
+			--        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
+			local servers = {
+				-- clangd = {},
+				-- gopls = {},
+				-- pyright = {},
+				-- rust_analyzer = {},
+				-- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
+				--
+				-- Some languages (like typescript) have entire language plugins that can be useful:
+				--    https://github.com/pmizio/typescript-tools.nvim
+				--
+				-- But for many setups, the LSP (`ts_ls`) will work just fine
+				-- ts_ls = {},
+				--
+				elixirls = {},
+				lua_ls = {
+					-- cmd = { ... },
+					-- filetypes = { ... },
+					-- capabilities = {},
+					settings = {
+						Lua = {
+							completion = {
+								callSnippet = "Replace",
+							},
+							-- You can toggle below to ignore Lua_LS's noisy `missing-fields` warnings
+							-- diagnostics = { disable = { 'missing-fields' } },
+						},
+					},
+				},
+			}
+
+			-- Ensure the servers and tools above are installed
+			--  To check the current status of installed tools and/or manually install
+			--  other tools, you can run
+			--    :Mason
+			--
+			--  You can press `g?` for help in this menu.
+			require("mason").setup()
+
+			-- You can add other tools here that you want Mason to install
+			-- for you, so that they are available from within Neovim.
+			local ensure_installed = vim.tbl_keys(servers or {})
+			vim.list_extend(ensure_installed, {
+				"stylua", -- Used to format Lua code
+			})
+			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
+
+			require("mason-lspconfig").setup({
+				handlers = {
+					function(server_name)
+						local server = servers[server_name] or {}
+						-- This handles overriding only values explicitly passed
+						-- by the server configuration above. Useful when disabling
+						-- certain features of an LSP (for example, turning off formatting for ts_ls)
+						server.capabilities = vim.tbl_deep_extend("force", {}, capabilities, server.capabilities or {})
+						require("lspconfig")[server_name].setup(server)
+					end,
+				},
+			})
+		end,
+	},
+
+	{ -- Autoformat
+		"stevearc/conform.nvim",
+		event = { "BufWritePre" },
+		cmd = { "ConformInfo" },
+		keys = {
+			{
+				"<leader>f",
+				function()
+					require("conform").format({ async = true, lsp_format = "fallback" })
+				end,
+				mode = "",
+				desc = "[F]ormat buffer",
+			},
+		},
+		opts = {
+			notify_on_error = false,
+			--[[
+			-- "<leader>c" for formating
+			--https://tduyng.com/blog/neovim-formatter-conform/
+			format_on_save = function(bufnr)
+				-- Disable "format_on_save lsp_fallback" for languages that don't
+				-- have a well standardized coding style. You can add additional
+				-- languages here or re-enable it for the disabled ones.
+				local disable_filetypes = { c = true, cpp = true }
+				local lsp_format_opt
+				if disable_filetypes[vim.bo[bufnr].filetype] then
+					lsp_format_opt = "never"
+				else
+					lsp_format_opt = "fallback"
+				end
+				return {
+					timeout_ms = 500,
+					lsp_format = lsp_format_opt,
+				}
+			end,
+			]]
+			formatters_by_ft = {
+				javascript = { "biome" },
+				lua = { "stylua" },
+				-- Conform can also run multiple formatters sequentially
+				python = { "ruff_format" },
+				-- You can use 'stop_after_first' to run the first available formatter from the list
+				-- javascript = { "prettierd", "prettier", stop_after_first = true },
+			},
+		},
+	},
+
+	{
+		"nvim-neorg/neorg",
+		build = ":Neorg sync-parsers",
+		dependencies = { "nvim-lua/plenary.nvim" },
+		config = function()
+			require("neorg").setup({
+				load = {
+					["core.defaults"] = {},
+					["core.concealer"] = {},
+					["core.dirman"] = {
+						config = {
+							workspaces = {
+								notes = "~/notes",
+							},
+							default_workspace = "notes",
+						},
+					},
+				},
+			})
+
+			vim.wo.foldlevel = 99
+			vim.wo.conceallevel = 2
+		end,
+	},
+})
+-- vim.cmd.colorscheme('kanagawa')
 
 			-- LSP servers and clients are able to communicate to each other what features they support.
 			--  By default, Neovim doesn't support everything that is in the LSP specification.
